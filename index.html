@@ -134,6 +134,15 @@ setInterval(() => {
             }
         });
 }, 500);
+        setInterval(() => {
+    fetch('http://localhost:3000/check-spin')
+        .then(res => res.json())
+        .then(data => {
+            if (data.spin) {
+                document.getElementById('spin-btn').click(); // Нажимает кнопку в рулетке
+            }
+        });
+}, 500); // Проверяет каждые полсекунды
     </script>
 </body>
 </html>
