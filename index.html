@@ -143,6 +143,18 @@ setInterval(() => {
             }
         });
 }, 500); // Проверяет каждые полсекунды
+   // Проверка запуска каждые 500мс
+setInterval(() => {
+    fetch('http://localhost:3000/check')
+        .then(res => res.json())
+        .then(data => {
+            if (data.spin) {
+                // Тут должен быть вызов твоей функции вращения
+                // Если кнопка имеет id="spin-btn", то:
+                document.getElementById('spin-btn').click();
+            }
+        });
+}, 500);
     </script>
 </body>
 </html>
