@@ -124,6 +124,16 @@
 
         init();
         window.onkeydown = (e) => { if (e.code === 'Space') spin(); };
+        // Проверка нажатия кнопки в игре каждые полсекунды
+setInterval(() => {
+    fetch('http://localhost:3000/check')
+        .then(res => res.json())
+        .then(data => {
+            if (data.spin && !btn.disabled) {
+                spin(); // Запускаем вращение!
+            }
+        });
+}, 500);
     </script>
 </body>
 </html>
