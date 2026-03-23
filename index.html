@@ -2,159 +2,98 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>TNT Spinner</title>
+    <title>TNT Roulette Stream</title>
     <style>
-        body { background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; font-family: 'Arial Black', sans-serif; overflow: hidden; }
-        .wrapper { position: relative; width: 700px; height: 160px; background: rgba(20, 20, 20, 0.9); border: 3px solid #444; overflow: hidden; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); transition: transform 0.1s; }
-        .shake { animation: shakeEffect 0.5s ease-in-out 2; }
-        @keyframes shakeEffect { 0%, 100% { transform: translate(0, 0); } 25% { transform: translate(-5px, 5px) rotate(-1deg); } 50% { transform: translate(5px, -5px) rotate(1deg); } 75% { transform: translate(-5px, -5px) rotate(-1deg); } }
+        body { background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; font-family: 'Arial Black', sans-serif; overflow: hidden; color: white; }
+        .wrapper { position: relative; width: 700px; height: 160px; background: rgba(0, 0, 0, 0.8); border: 3px solid #444; overflow: hidden; border-radius: 12px; box-shadow: 0 0 30px rgba(0,0,0,1); }
         .pointer { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 15px solid transparent; border-right: 15px solid transparent; border-top: 25px solid #ffcc00; z-index: 10; filter: drop-shadow(0 2px 5px black); }
-        .track { display: flex; position: absolute; left: 0; top: 0; height: 100%; align-items: center; will-change: transform; }
+        .track { display: flex; position: absolute; left: 0; top: 0; height: 100%; align-items: center; will-change: transform; padding-left: 350px; }
         .item { width: 120px; height: 140px; margin: 0 5px; background: #222; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; border-bottom: 5px solid #444; }
         .tnt-block { width: 80px; height: 80px; position: relative; display: flex; align-items: center; justify-content: center; }
         .tnt-red { background: #b02e26; border: 4px solid #85231e; }
         .tnt-blue { background: #3c44a9; border: 4px solid #2d3380; }
-        .tnt-mega { background: linear-gradient(45deg, #4b0082, #800080); border: 4px solid #2e004d; animation: glowMega 2s linear infinite; }
-        @keyframes glowMega { 0% { background-position: 0% 50%; } 100% { background-position: 100% 50%; } }
-        .tnt-block::after { content: "TNT"; position: absolute; background: #f0f0f0; color: #333; width: 100%; height: 22px; font-size: 16px; display: flex; align-items: center; justify-content: center; border-top: 2px solid #333; border-bottom: 2px solid #333; font-weight: bold; }
-        .tnt-mega::after { content: "MEGA"; background: #ffd700; color: #000; }
-        button { margin-top: 25px; padding: 12px 45px; background: #ff4444; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 22px; text-transform: uppercase; box-shadow: 0 5px 0 #b33030; transition: 0.1s; }
-        button:active { transform: translateY(2px); box-shadow: 0 3px 0 #b33030; }
-        button:disabled { background: #555; box-shadow: 0 5px 0 #333; opacity: 0.7; cursor: not-allowed; }
-        #status { color: #aaa; margin-top: 10px; font-size: 14px; }
+        .tnt-mega { background: linear-gradient(45deg, #4b0082, #800080, #4b0082); background-size: 200% 200%; border: 4px solid #2e004d; animation: glowMega 2s linear infinite; }
+        @keyframes glowMega { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+        .tnt-block::after { content: "TNT"; position: absolute; background: #f0f0f0; color: #333; width: 100%; height: 22px; font-size: 16px; display: flex; align-items: center; justify-content: center; border-top: 2px solid #333; border-bottom: 2px solid #333; font-family: sans-serif; font-weight: bold; }
+        .tnt-mega::after { content: "MEGA"; background: #ffd700; color: #000; font-size: 14px; }
+        .rarity-red { border-bottom-color: #ff4444; }
+        .rarity-blue { border-bottom-color: #0088ff; }
+        .rarity-mega { border-bottom-color: #aa00ff; }
+        #status { margin-top: 20px; font-size: 20px; text-shadow: 2px 2px 5px black; height: 30px; }
     </style>
 </head>
 <body>
-    <div id="mainWrapper" class="wrapper">
+    <div id="status"></div>
+    <div class="wrapper">
         <div class="pointer"></div>
         <div id="track" class="track"></div>
     </div>
-    <button id="spinBtn" onclick="spin()">ВЗОРВАТЬ ТНТ</button>
-    <div id="status">Мостик: ожидание...</div>
 
     <script>
         const track = document.getElementById('track');
-        const wrapper = document.getElementById('mainWrapper');
-        const btn = document.getElementById('spinBtn');
-        const statusText = document.getElementById('status');
-        const itemWidth = 130; 
+        const status = document.getElementById('status');
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        let isSpinning = false;
 
-        function playSound(freq, type, dur, vol = 0.1) {
+        function playSound(freq, type, duration, vol=0.2) {
             const osc = audioCtx.createOscillator();
-            const g = audioCtx.createGain();
+            const gain = audioCtx.createGain();
             osc.type = type; osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-            g.gain.setValueAtTime(vol, audioCtx.currentTime);
-            g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + dur);
-            osc.connect(g); g.connect(audioCtx.destination);
-            osc.start(); osc.stop(audioCtx.currentTime + dur);
+            gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.start(); osc.stop(audioCtx.currentTime + duration);
         }
 
         function init() {
             track.innerHTML = '';
             for (let i = 0; i < 150; i++) {
                 const rand = Math.random();
-                let type, winTag;
-                if (rand < 0.2) { type = 'tnt-mega'; winTag = 'mega'; }
-                else if (rand < 0.5) { type = 'tnt-blue'; winTag = 'blue'; }
-                else { type = 'tnt-red'; winTag = 'red'; }
+                let type = rand < 0.1 ? 'tnt-mega' : (rand < 0.4 ? 'tnt-blue' : 'tnt-red');
+                let rarity = rand < 0.1 ? 'rarity-mega' : (rand < 0.4 ? 'rarity-blue' : 'rarity-red');
                 const div = document.createElement('div');
-                div.className = 'item';
-                div.dataset.win = winTag;
+                div.className = `item ${rarity}`;
                 div.innerHTML = `<div class="tnt-block ${type}"></div>`;
                 track.appendChild(div);
             }
         }
 
         function spin() {
-            if (btn.disabled) return;
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            btn.disabled = true;
-            wrapper.classList.remove('shake');
-            statusText.innerText = "Крутим...";
+            if (isSpinning) return;
+            isSpinning = true;
+            status.textContent = "Крутим рулетку...";
             
-            const landingIdx = 115 + Math.floor(Math.random() * 15); 
-            const totalShift = (landingIdx * itemWidth) - 350 + (itemWidth / 2);
-            
+            const itemWidth = 130;
+            const landingIdx = 130 + Math.floor(Math.random() * 10);
+            const totalShift = (landingIdx * itemWidth) + (Math.random() * 80 - 40);
+
             track.style.transition = 'none';
             track.style.transform = 'translateX(0)';
-            
-            let lastPos = 0;
-            const tickSound = () => {
-                const curPos = Math.abs(track.getBoundingClientRect().left);
-                if (Math.floor(curPos / itemWidth) > lastPos) {
-                    playSound(400, 'sine', 0.05, 0.03);
-                    lastPos = Math.floor(curPos / itemWidth);
-                }
-                if (btn.disabled) requestAnimationFrame(tickSound);
-            };
 
             setTimeout(() => {
                 track.style.transition = 'transform 8s cubic-bezier(0.1, 0, 0.05, 1)';
                 track.style.transform = `translateX(-${totalShift}px)`;
-                requestAnimationFrame(tickSound);
+                
+                // Звук тиканья
+                for(let i=0; i<40; i++) {
+                    setTimeout(() => { if(isSpinning) playSound(400, 'sine', 0.1, 0.05); }, Math.pow(i, 2) * 4.5);
+                }
             }, 50);
 
+            // Финал через 8.2 секунды
             setTimeout(() => {
-                btn.disabled = false;
-                const win = track.children[landingIdx];
-                const type = win.dataset.win;
+                isSpinning = false;
+                status.textContent = "БАБАХ! Команда готова (CTRL+V)";
+                playSound(60, 'sawtooth', 0.8, 0.4);
                 
-                if (type === 'mega') {
-                    wrapper.classList.add('shake');
-                    playSound(40, 'sawtooth', 1.5, 0.4);
-                } else {
-                    playSound(150, 'square', 0.4, 0.1);
-                }
-
-                // ОТПРАВКА КОМАНДЫ НА ЛОКАЛЬНЫЙ МОСТИК
-                statusText.innerText = "Отправка в игру...";
-                fetch(`http://localhost:3000/run?type=${type}`)
-                    .then(res => {
-                        if(res.ok) statusText.innerText = "БАБАХ! (Успешно)";
-                        else statusText.innerText = "Ошибка мостика!";
-                    })
-                    .catch(() => {
-                        statusText.innerText = "ОШИБКА: Запусти bridge.js!";
-                        console.error("Мостик не запущен на localhost:3000");
-                    });
-
+                // АВТО-КОПИРОВАНИЕ КОМАНДЫ
+                const cmd = "execute at @a run summon tnt ~ ~ ~";
+                navigator.clipboard.writeText(cmd);
             }, 8200);
         }
 
+        window.onkeydown = (e) => { if (e.code === 'Space') { audioCtx.resume(); spin(); } };
         init();
-        window.onkeydown = (e) => { if (e.code === 'Space') spin(); };
-        // Проверка нажатия кнопки в игре каждые полсекунды
-setInterval(() => {
-    fetch('http://localhost:3000/check')
-        .then(res => res.json())
-        .then(data => {
-            if (data.spin && !btn.disabled) {
-                spin(); // Запускаем вращение!
-            }
-        });
-}, 500);
-        setInterval(() => {
-    fetch('http://localhost:3000/check-spin')
-        .then(res => res.json())
-        .then(data => {
-            if (data.spin) {
-                document.getElementById('spin-btn').click(); // Нажимает кнопку в рулетке
-            }
-        });
-}, 500); // Проверяет каждые полсекунды
-   // Проверка запуска каждые 500мс
-setInterval(() => {
-    fetch('http://localhost:3000/check')
-        .then(res => res.json())
-        .then(data => {
-            if (data.spin) {
-                // Тут должен быть вызов твоей функции вращения
-                // Если кнопка имеет id="spin-btn", то:
-                document.getElementById('spin-btn').click();
-            }
-        });
-}, 500);
     </script>
 </body>
 </html>
